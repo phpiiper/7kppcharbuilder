@@ -3,25 +3,16 @@
   --foreground: #171717;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
 
 html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
+  font-family: 'Bahnschrift';
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+
 }
 
 * {
@@ -30,13 +21,99 @@ body {
   margin: 0;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+#page {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+}
+#page > h1 {
+  text-align: center;
+}
+#page > button {
+  width: fit-content;
+  padding: 0.25rem 1rem;
+  background-color: white;
+  margin: auto;
+  border: 2px solid rgba(0,0,0,0);
+  transition: 0.2s;
+}
+#page > button:hover {
+  border-color: black;
+  cursor: pointer;
+}
+.flex {
+  display: flex; flex-direction: column;
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+}
+.flex.row {
+  flex-direction: row;
+}
+.flex > div {
+  width: 100%; height: 100%;
+  overflow-y: auto;
+}
+.flex > div h2 {
+  text-align: center;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+.choice-list {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0.25rem 0;
+  flex-wrap: wrap;
+  align-items: center;
+
+  border-bottom: 2px solid grey; padding-bottom: 8px;
+  width: fit-content;
+}
+.choice-list button {
+  border: 1px solid black;
+  background-color: white;
+  padding: 0.5rem 0.75rem;
+  transition: 0.2s;
+}
+.choice-list button:hover {
+  background-color: #dddddd;
+  cursor: pointer;
+}
+.choice-list button.selected {
+  background-color: #377498;
+  color: white;
+}
+
+.stat {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.2rem 0;
+}
+.stat-number {
+  width: 1.5rem; height: 1.5rem; border: 1px solid black;
+  display: flex; align-items: center; justify-content: center;
+}
+.stat-name {
+  width: 10rem;
+}
+
+input[type="range"][disabled] {
+  background-color: green;
+  color: blue;
+}
+
+
+@media (width < 700px){
+  #qr-container {
+    flex-direction: column !important;
+  }
+  #qr-container > div {
+    padding: 1rem 0;
+    height: 40vh !important;
+    border-top: 5px solid black;
+  }
+  .choice-list {
+    width: 100%;
+  }
+  .choice-list button {
+    padding: 0.25rem 0.5rem;
+    font-size: 1rem;
   }
 }
