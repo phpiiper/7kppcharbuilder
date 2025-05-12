@@ -28,15 +28,14 @@ body {
 #page > h1 {
   text-align: center;
 }
-#page > button {
+#page > div > button {
   width: fit-content;
   padding: 0.25rem 1rem;
   background-color: white;
-  margin: auto;
   border: 2px solid rgba(0,0,0,0);
   transition: 0.2s;
 }
-#page > button:hover {
+#page > div > button:hover {
   border-color: black;
   cursor: pointer;
 }

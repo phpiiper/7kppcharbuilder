@@ -1,7 +1,11 @@
 'use client'
 import {useEffect, useState} from "react";
+import {useRouter} from "next/navigation";
+
+
 
 export default function Home() {
+    const router = useRouter();
     const stats = ["Charm","Eloquence","Beauty","Leadership","Self-Defense","Charisma","Manipulation","Courage","Intelligence","Etiquette","Grace","Poise","Cunning","Insight","History","Politics","Street Smarts","Warfare","Practical","Academic","People","Flora & Fauna","Secrets"]
     const cumulative = ["Persuasion","Likeability","Quick Wittedness","Defensive Instincts","Interpersonal Insight","Book Smarts"]
     const boosts = [15,10,10,10,10,10,15,10,15,15,15,10,10,0]
@@ -19,8 +23,8 @@ export default function Home() {
     ]
 
     const backgrounds = [
-        // Daughter of Notorious Pirate (Charisma, Courage, Cunning, Warfare +25) - Default Unlock
-        ["Daughter of Notorious Pirate", [0,0,0,0,0,25,0,25,0,0,0,0,25,0,0,0,0,25,0,0,0,0,0]],
+        // Daughter a of Notorious Pirate (Charisma, Courage, Cunning, Warfare +25) - Default Unlock
+        ["Daughter of a Notorious Pirate", [0,0,0,0,0,25,0,25,0,0,0,0,25,0,0,0,0,25,0,0,0,0,0]],
         // Court Lady (Eloquence, People, Politics +25) - Politics > 50
         ["Court Lady", [0,25,0,0,0,0,0,0,0,0,0,0,0,0,0,25,0,0,0,0,25,0,0]],
         // Scholarly Bent (Intelligence, Academics 35+ AND history +25) - Intelligence > 50
@@ -36,6 +40,7 @@ export default function Home() {
     const [finalStats, setFinalStats] = useState(user_stats)
     const [finalCumul, setFinalCumul] = useState([0,0,0,0,0,0])
     const [useBonus, setUseBonus] = useState(false)
+    const [useInsight, setUseInsight] = useState(false)
     const [backgroundIndex, setBackgroundIndex] = useState(-1)
     const [enableBackgrounds, setEnableBackgrounds] = useState([true,false,false,true,false,true])
 
@@ -56,6 +61,9 @@ export default function Home() {
         }
         if (useBackground && backgroundIndex !== -1) {
             final_stats = final_stats.map((x,i) => x + backgrounds[backgroundIndex][1][i])
+        }
+        if (useInsight){
+            final_stats[13] += 70;
         }
         for (var i=0; i<array.length; i++){
             let ind = stats.findIndex(x => x === array[i])
@@ -130,7 +138,7 @@ export default function Home() {
 
     useEffect(() => {
         setUserStats();
-    }, [useBonus, backgroundIndex]);
+    }, [useBonus, useInsight, backgroundIndex]);
     useEffect(() => {
         ensureBackgroundStats(calculateChoices(getStatsArray(), false));
     }, [finalStats]);
@@ -138,7 +146,11 @@ export default function Home() {
     return (
     <div id="page">
       <h1>7KPP Stat Creator</h1>
-      <button style={{backgroundColor: useBonus ? "#91f886" : "#f88686"}} onClick={() => setUseBonus(!useBonus)}>NG+ Bonus ({useBonus ? "On" : "Off"})</button>
+      <div className={"flex row"} style={{justifyContent: "center", gap: "1rem"}}>
+          <button style={{backgroundColor: "#6a7481", color: "white"}} onClick={() => window.location.reload()}>Reload</button>
+          <button style={{backgroundColor: useBonus ? "#91f886" : "#f88686"}} onClick={() => setUseBonus(!useBonus)}>NG+ Bonus ({useBonus ? "On" : "Off"})</button>
+          <button style={{backgroundColor: useInsight ? "#91f886" : "#f88686"}} onClick={() => setUseInsight(!useInsight)}>Max Insight ({useInsight ? "On" : "Off"})</button>
+      </div>
       <div className={"flex row"} id={"qr-container"}>
         <div className={"left"} style={{height: "calc(100vh - 150px)", overflowY: "scroll"}}>
           <h2>Questions</h2>
@@ -148,12 +160,9 @@ export default function Home() {
             </div>))}
             <h2>Background</h2>
             <div className={"choice-list"} id={"background-choice-list"}>
-                <button className={"choice"} onClick={setBackground}>Daughter of a Notorious Pirate</button>
-                <button disabled={!enableBackgrounds[1]} className={"choice"} onClick={setBackground}>Court Lady</button>
-                <button disabled={!enableBackgrounds[2]} className={"choice"} onClick={setBackground}>Minor Lady with Scholarly Bent</button>
-                <button className={"choice"} onClick={setBackground}>Ambitious Widow</button>
-                <button disabled={!enableBackgrounds[4]} className={"choice"} onClick={setBackground}>Tomboy Countess</button>
-                <button disabled={!enableBackgrounds[5]} className={"choice"} onClick={setBackground}>Sheltered Princess</button>
+                {backgrounds.map((x, i) =>
+                    <button key={"bg-"+i} disabled={!enableBackgrounds[i]} className={"choice"} onClick={setBackground}>{x[0]}</button>
+                )}
             </div>
         </div>
         <div className={"right"}  style={{height: "calc(100vh - 150px)", overflowY: "scroll"}}>
