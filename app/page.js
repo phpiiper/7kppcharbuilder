@@ -1,189 +1,372 @@
 'use client'
+import {Tooltip, Button, Card, IconButton, Typography, ButtonGroup, Switch} from "@mui/joy";
 import {useEffect, useState} from "react";
-import {useRouter} from "next/navigation";
+import { Group, Panel, Separator } from "react-resizable-panels";
+import {
+    TouchApp,
+    ThumbUp,
+    DirectionsRun,
+    Shield,
+    People,
+    Book,
+    Wallpaper,
+    CheckCircleOutline,
+    Checklist,
+    Rocket,
+    Visibility
+} from "@mui/icons-material"
+import { isMobile } from 'react-device-detect'
 
+const STATS = [
+    {name: "Charm", boostValue: 15, defaultValue: 25, cat: ["Likeability"],},
+    {name: "Eloquence", boostValue: 10, defaultValue: 25, cat: ["Persuasion"],},
+    {name: "Beauty", boostValue: 10, defaultValue: 25, cat: ["Likeability"],},
+    {name: "Leadership", boostValue: 10, defaultValue: 25, cat: ["Persuasion"],},
+    {name: "Self-Defense", boostValue: 10, defaultValue: 0, cat: ["Defensive Instincts"],},
+    {name: "Charisma", boostValue: 10, defaultValue: 25, cat: ["Persuasion","Likeability"],},
+    {name: "Manipulation", boostValue: 15, defaultValue: 0, cat: ["Persuasion"],},
+    {name: "Courage", boostValue: 10, defaultValue: 25, cat: ["Defensive Instincts"],},
+    {name: "Intelligence", boostValue: 15, defaultValue: 25, cat: ["Quick Wittedness","Book Smarts"],},
+    {name: "Etiquette", boostValue: 15, defaultValue: 25, cat: ["Likeability"],},
+    {name: "Grace", boostValue: 15, defaultValue: 25, cat: ["Defensive Instincts"],},
+    {name: "Poise", boostValue: 10, defaultValue: 25, cat: ["Persuasion"],},
+    {name: "Cunning", boostValue: 10, defaultValue: 0, cat: ["Quick Wittedness","Defensive Instincts"],},
+    {name: "Insight", boostValue: 0, defaultValue: 0, cat: ["Persuasion","Quick Wittedness","Interpersonal Insight"],},
+    {name: "History", boostValue: 10, defaultValue: 0, cat: ["Book Smarts"],},
+    {name: "Politics", boostValue: 10, defaultValue: 0, cat: ["Interpersonal Insight"],},
+    {name: "Street Smarts", boostValue: 0, defaultValue: 0, cat: [],},
+    {name: "Warfare", boostValue: 0, defaultValue: 0, cat: [],},
+    {name: "Practical", boostValue: 0, defaultValue: 0, cat: [],},
+    {name: "Academic", boostValue: 10, defaultValue: 0, cat: ["Book Smarts"],},
+    {name: "People", boostValue: 15, defaultValue: 0, cat: ["Interpersonal Insight"],},
+    {name: "Flora & Fauna", boostValue: 0, defaultValue: 0, cat: [],},
+    {name: "Secrets", boostValue: 0, defaultValue: 0, cat: [],}
+]
+const CATS = {
+    Persuasion: <TouchApp
+        style={{fontSize: "inherit"}}
+    />,
+    Likeability: <ThumbUp
+        style={{fontSize: "inherit"}}
+    />,
+    "Quick Wittedness": <DirectionsRun
+        style={{fontSize: "inherit"}}
+    />,
+    "Defensive Instincts": <Shield
+        style={{fontSize: "inherit"}}
+    />,
+    "Interpersonal Insight": <People
+        style={{fontSize: "inherit"}}
+    />,
+    "Book Smarts": <Book
+        style={{fontSize: "inherit"}}
+    />,
+}
+const CHOICES = [
+    ["Beauty","Intelligence","Charisma","Charm"],
+    ["History","Politics","Warfare","Academic"],
+    ["Leadership","Courage","Cunning","Manipulation"],
+    ["Eloquence","Etiquette","Intelligence","Beauty"],
+    ["Street Smarts","Practical","People","Flora & Fauna"],
+    ["Self-Defense","Etiquette","Manipulation"],
+    ["Intelligence","Manipulation","Courage","Charm"],
+    ["Poise","Grace","Cunning","Eloquence"],
+    ["Politics","Practical","History","Academic"],
+]
+const BACKGROUNDS = [
+    {
+        name: "Daughter of a Notorious Pirate",
+        stats: {Charisma: 25, Courage: 25, Cunning: 25, Warfare: 25},
+        reqs: {}
+    },
+    {
+        name: "Court Lady",
+        stats: {Eloquence: 25, People: 25, Politics: 25},
+        reqs: {Politics: ">= 50"}
+    },
+    {
+        name: "Minor Lady with Scholarly Bent",
+        stats: {Intelligence: 35, Academics: 35, History: 25},
+        reqs: {Intelligence: ">= 50"}
+    },
+    {
+        name: "Ambitious Widow",
+        stats: {Charisma: 25, Cunning: 25, People: 25, Politics: 25},
+        reqs: {}
+    },
+    {
+        name: "Tomboy Countess",
+        stats: {Etiquette: -25, Courage: 25, "Self-Defense": 25},
+        reqs: {Courage: ">= 50", Warfare: ">= 25", "Self-Defense": ">= 25"}
+    },
+    {
+        name: "Sheltered Princess",
+        stats: {Etiquette: 35, Politics: 15, People: 25},
+        reqs: {
+            Warfare: "== 0",
+            "Street Smarts": "== 0",
+            "Self-Defense": "== 0",
+            Cunning: "== 0",
+            Manipulation: "== 0",
+            Courage: "< 50"
+        }
+    },
+]
 
+const defaultCharacter = (useBoost = false, slctBackground) => {
+    let c = {
+        stats: {},
+        backgrounds: BACKGROUNDS.filter(x => Object.keys(x.reqs).length === 0).map(x => x.name)
+    }
+    STATS.forEach(stat => {
+        let affByBg = !!(slctBackground && stat.name in slctBackground.stats)
+        c.stats[stat.name] = {...c.stats[stat.name],
+            affectedByBackground: affByBg,
+            value:  stat.defaultValue +
+                (useBoost ? stat.boostValue : 0) +
+                (affByBg ? slctBackground.stats[stat.name] : 0)
+        }
+    })
+    return c
+}
+const canUseBackground = (charStats, background) => {
+    if (Object.keys(background.reqs).length === 0) return true
+    for (let stat in background.reqs) {
+        let remIfAff = background.stats[stat] && charStats[stat].affectedByBackground ? -background.stats[stat] : 0
+        if (!eval((charStats[stat].value + remIfAff) + background.reqs[stat])) return false
+    }
+    return true
+}
+const createCharacter = (slctOptions, slctBackground, useBoosts=false, useInsight=false) => {
+    const slctBG = BACKGROUNDS.find(x => x.name === slctBackground);
+    let base = defaultCharacter(useBoosts, slctBG); // + use boosts and BG?
+    // add stuff from CHOICES
+    for (let i = 0; i < slctOptions.length; i++) {
+        let opInd = slctOptions[i]
+        if (opInd === -1) continue
+        base.stats[CHOICES[i][opInd]].value += 25
+        base.stats[CHOICES[i][opInd]].affectedByChoice = true
+    }
+    // check for usable BACKGROUND
+    const bgs =  BACKGROUNDS.filter(x => canUseBackground(base.stats, x))
+    base.backgrounds = bgs.map(x => x.name)
+    // check for insight?
+    if (useInsight) {
+        base.stats["Insight"].value = 80
+    }
 
-export default function Home() {
-    const router = useRouter();
-    const stats = ["Charm","Eloquence","Beauty","Leadership","Self-Defense","Charisma","Manipulation","Courage","Intelligence","Etiquette","Grace","Poise","Cunning","Insight","History","Politics","Street Smarts","Warfare","Practical","Academic","People","Flora & Fauna","Secrets"]
-    const cumulative = ["Persuasion","Likeability","Quick Wittedness","Defensive Instincts","Interpersonal Insight","Book Smarts"]
-    const boosts = [15,10,10,10,10,10,15,10,15,15,15,10,10,0]
-    let user_stats = [25,25,25,25,0,25,0,25,25,25,25,25,0,0,0,0,0,0,0,0,0,0,0]
-    let choices = [
-        ["Beauty","Intelligence","Charisma","Charm"],
-        ["History","Politics","Warfare","Academic"],
-        ["Leadership","Courage","Cunning","Manipulation"],
-        ["Eloquence","Etiquette","Intelligence","Beauty"],
-        ["Street Smarts","Practical","People","Animals and Plants"],
-        ["Self-Defense","Etiquette","Manipulation","Charm"],
-        ["Intelligence","Manipulation","Courage"],
-        ["Poise","Intelligence","Cunning","Eloquence"],
-        ["Politics","Intelligence","History","Academic"],
-    ]
+    return base
+}
 
-    const backgrounds = [
-        // Daughter a of Notorious Pirate (Charisma, Courage, Cunning, Warfare +25) - Default Unlock
-        ["Daughter of a Notorious Pirate", [0,0,0,0,0,25,0,25,0,0,0,0,25,0,0,0,0,25,0,0,0,0,0]],
-        // Court Lady (Eloquence, People, Politics +25) - Politics > 50
-        ["Court Lady", [0,25,0,0,0,0,0,0,0,0,0,0,0,0,0,25,0,0,0,0,25,0,0]],
-        // Scholarly Bent (Intelligence, Academics 35+ AND history +25) - Intelligence > 50
-        ["Minor Lady with Scholarly Bent", [0,0,0,0,0,0,0,0,35,0,0,0,0,0,25,0,0,0,0,35,0,0,0]],
-        // Ambitious Widow (Charisma, Cunning, People, Politics +25) - Expected Unlock
-        ["Ambitious Widow", [0,0,0,0,0,25,0,0,0,0,0,0,25,0,0,25,0,0,0,0,25,0,0]],
-        // Tomboy (-25 Etiquette, 25+ Courage, Self Defense) - Courage > 50, Warfare > 25, Self Defense > 25
-        ["Tomboy Countess", [0,0,0,0,25,0,0,25,0,-25,0,0,0,0,0,0,0,0,0,0,0,0,0]],
-        // Sheltered Princess (+35 Etiquette, 15+ Politics, People) - Warfare, Street Smarts, Self Defense, Cunning, Manipulation < 0, Courage < 50
-        ["Sheltered Princess", [0,0,0,0,0,0,0,0,0,35,0,0,0,0,0,15,0,0,0,0,15,0,0]],
-    ]
-
-    const [finalStats, setFinalStats] = useState(user_stats)
-    const [finalCumul, setFinalCumul] = useState([0,0,0,0,0,0])
-    const [useBonus, setUseBonus] = useState(false)
+export default function WHSP() {
+    const [selectedOptions, setSelectedOptions] = useState(CHOICES.map(x => -1))
+    const [selectedBackground, setSelectedBackground] = useState(null)
+    const [character, setCharacter] = useState(defaultCharacter())
+    const [useBoosts, setUseBoosts] = useState(false)
     const [useInsight, setUseInsight] = useState(false)
-    const [backgroundIndex, setBackgroundIndex] = useState(-1)
-    const [enableBackgrounds, setEnableBackgrounds] = useState([true,false,false,true,false,true])
 
-    const getStatsArray = () =>{
-        return choices = Array.from(document.getElementsByClassName("choice-list")).map(x => x.dataset.data);
-    }
-    const setUserStats = () => {
-        let stats = calculateChoices(getStatsArray())
-        setFinalCumul(calculateCumulative(stats))
-        setFinalStats(stats)
-        // text (charisma, intelligence, etc)
-    }
-    const calculateChoices = (array, useBackground=true) => {
-        // expect [25,50,75,etc]
-        let final_stats = [...user_stats]
-        if (useBonus){
-            final_stats = user_stats.map((x,i ) => boosts[i] ? x + boosts[i] : x)
-        }
-        if (useBackground && backgroundIndex !== -1) {
-            final_stats = final_stats.map((x,i) => x + backgrounds[backgroundIndex][1][i])
-        }
-        if (useInsight){
-            final_stats[13] += 70;
-        }
-        for (var i=0; i<array.length; i++){
-            let ind = stats.findIndex(x => x === array[i])
-            if (ind !== -1) {final_stats[ind] += 25;}
-        }
-        return final_stats
-    }
-    const calculateCumulative = (array) => {
-        let cumulative = [0,0,0,0,0,0]
-        // Persuasion | Charisma, Eloquence, Leadership, Insight, Poise, Manipulation
-            cumulative[0] = (array[5] + array[1] + array[3] + array[13] + array[11] + array[6])
-        // Likeability Charisma, Charm, Etiquette, Beauty
-            cumulative[1] = (array[5] + array[0] + array[9] + array[2])
-        // Quick Wittedness | Cunning, Intelligence | Insight
-            cumulative[2] = (array[12] + array[13] + array[8])
-        // Defensive Instinct | Courage, Cunning, Self Defense, Grace
-            cumulative[3] = (array[7] + array[12] + array[4] + array[10])
-        // Interpersonal Insight | Politics, Insight, People
-            cumulative[4] = (array[15] + array[13] + array[20])
-        // Book Smarts | Intelligence, History, Academics
-            cumulative[5] = (array[8] + array[14] + array[19])
-        return cumulative;
+    const [viewIcons, setViewIcons] = useState(true)
+    const [useMobileView, setUseMobileView] = useState(false)
 
-    }
-    const setChoice = (event) => {
-        let value = event.target.innerText;
-        let parent = event.target.parentNode;
-            let sc = Array.from(parent.childNodes).find(x => x.classList.contains("selected"));
-            if (sc){ sc.classList.remove("selected"); }
-        parent.dataset.data = value;
-        event.target.classList.add("selected");
-        setUserStats()
-    }
-    const setBackground = (event) => {
-        ensureBackgroundStats(calculateChoices(getStatsArray(), false))
-        let value = event.target.innerText;
-        let parent = event.target.parentNode;
-        let index = backgrounds.findIndex(x => x[0] === value)
-        let sc = Array.from(parent.childNodes).find(x => x.classList.contains("selected"));
-        if (sc){ sc.classList.remove("selected"); }
-            if (enableBackgrounds[index]) {
-                event.target.classList.add("selected");
-                setBackgroundIndex(index)
-            } else {
-                setBackgroundIndex(-1)
-            }
-    }
-
-    const ensureBackgroundStats = (array) => {
-        let allow = [...enableBackgrounds]
-        // if court lady disabled
-        allow[1] = array[15] >= 25;
-        // if minor lady disabled
-        allow[2] = array[8] >= 50;
-        // if tomboy disabled
-        allow[4] = !(array[4] < 25 || array[7] < 50 || array[17] < 25);
-        // if sheltered princess disabled
-        allow[5] = !(array[4] >= 25 || array[7] >= 50 || array[17] >= 25 || array[12] >= 25 || array[6] >= 25 || array[16] >= 25);
-        setEnableBackgrounds(allow)
-        console.log(allow)
-        if (backgroundIndex !== -1 && !allow[backgroundIndex]) {
-            setBackgroundIndex(-1);
-            console.log("disabled: ",backgrounds[backgroundIndex])
-            // optional: remove "selected" class from the DOM button
-            const choices = Array.from(document.getElementById("background-choice-list").childNodes)
-            let ch = choices.find(x => x.classList.contains("selected"))
-            if (ch) {
-                ch.classList.remove("selected")
-            }
-        }
-    }
+    useEffect(()=>{
+        setUseMobileView(isMobile)
+    },[])
 
     useEffect(() => {
-        setUserStats();
-    }, [useBonus, useInsight, backgroundIndex]);
-    useEffect(() => {
-        ensureBackgroundStats(calculateChoices(getStatsArray(), false));
-    }, [finalStats]);
+        const newChar = createCharacter(selectedOptions, selectedBackground, useBoosts, useInsight)
+        setCharacter(newChar)
+    },[selectedOptions,selectedBackground, useBoosts, useInsight])
 
     return (
-    <div id="page">
-      <h1>7KPP Stat Creator</h1>
-      <div className={"flex row"} style={{justifyContent: "center", gap: "1rem"}}>
-          <button style={{backgroundColor: "#6a7481", color: "white"}} onClick={() => window.location.reload()}>Reload</button>
-          <button style={{backgroundColor: useBonus ? "#91f886" : "#f88686"}} onClick={() => setUseBonus(!useBonus)}>NG+ Bonus ({useBonus ? "On" : "Off"})</button>
-          <button style={{backgroundColor: useInsight ? "#91f886" : "#f88686"}} onClick={() => setUseInsight(!useInsight)}>Max Insight ({useInsight ? "On" : "Off"})</button>
-      </div>
-      <div className={"flex row"} id={"qr-container"}>
-        <div className={"left"} style={{height: "calc(100vh - 150px)", overflowY: "scroll"}}>
-          <h2>Questions</h2>
-            {choices.map((x, i) => (<div className={"choice-list"} key={"choice"+i} data-data={undefined}>
-                <span>Q{i+1}</span>
-                {x.map((y,j) => <button key={"btn-"+i+"-"+j} className={"choice"} onClick={setChoice}>{y}</button>)}
-            </div>))}
-            <h2>Background</h2>
-            <div className={"choice-list"} id={"background-choice-list"}>
-                {backgrounds.map((x, i) =>
-                    <button key={"bg-"+i} disabled={!enableBackgrounds[i]} className={"choice"} onClick={setBackground}>{x[0]}</button>
-                )}
-            </div>
-        </div>
-        <div className={"right"}  style={{height: "calc(100vh - 150px)", overflowY: "scroll"}}>
-          <h2>Skills</h2>
-            {stats.map((x, i) => (
-                <div className={"stat"} key={"stat"+i}>
-                    <span className={"stat-number"}>{finalStats[i]}</span>
-                    <span className={"stat-name"}>{x} </span>
-                    <span className={"stat-min"}>0</span>
-                    <input type={"range"} min={0} max={100} value={finalStats[i]} disabled />
-                    <span className={"stat-max"}>100</span>
-                </div>))}
-            <h2>Cumulative</h2>
-            {cumulative.map((x, i) => (
-                <div className={"flex row"} key={"cumul-"+i}>
-                    <div className={"stat-name"}>{cumulative[i]} </div>
-                    <div className={"stat-value"}>{finalCumul[i]} </div>
+        <div className={"page"}>
+            <div className={"page-content"}>
+                <h1>7KPP Character Builder</h1>
+
+                <div style={{display: "flex", alignItems: "center", gap: "0.5rem"}}>
+                    <label style={{display: "flex", alignItems: "center", gap: "0.5rem"}}>
+                        <Typography level={"body-md"}>Mobile View ({useMobileView ? "ON" : "OFF"}) </Typography>
+                        <Switch
+                            checked={useMobileView}
+                            onChange={(e) => setUseMobileView(e.target.checked)}
+                        />
+                    </label>
+
+                    <label style={{display: "flex", alignItems: "center", gap: "0.5rem"}}>
+                        <Typography level={"body-md"}>View Icons ({viewIcons ? "ON" : "OFF"}) </Typography>
+                        <Switch
+                            checked={viewIcons}
+                            onChange={(e) => setViewIcons(e.target.checked)}
+                        />
+                    </label>
+
+                    <label style={{display: "flex", alignItems: "center", gap: "0.5rem"}}>
+                        <Typography level={"body-md"}>NG+ Boosts ({useBoosts ? "ON" : "OFF"}) </Typography>
+                        <Switch
+                            checked={useBoosts}
+                            onChange={(e) => setUseBoosts(e.target.checked)}
+                        />
+                    </label>
+
+                    <label style={{display: "flex", alignItems: "center", gap: "0.5rem"}}>
+                        <Typography level={"body-md"}>Max Insight ({useInsight ? "ON" : "OFF"}) </Typography>
+                        <Switch
+                            checked={useInsight}
+                            onChange={(e) => setUseInsight(e.target.checked)}
+                        />
+                    </label>
                 </div>
-            ))}
+
+                <Group className={"main-panel"} orientation={useMobileView ? "vertical" : "horizontal"}>
+                    <Panel defaultSize="60%" className={"ScrollPanel"}>
+                        <Typography level={"title-lg"}>Choices</Typography>
+                        <div className={"choice-list"}>
+                            {CHOICES.map((ch, index) => <StatChoice
+                                key={"stat-choice-" + index}
+                                choiceIndex={index+1}
+                                options={ch}
+                                handleSelect={(ind)=>{
+                                    setSelectedOptions(selectedOptions.map((x, i) => {
+                                        if (i !== index) return x
+                                        return ind
+                                    }))
+                                }}
+                            />)}
+                        </div>
+                        <Typography level={"title-lg"}>Backgrounds</Typography>
+                        <div className={"background-container"}>
+                            { BACKGROUNDS.map((bg, index) => <Button
+                                key={"background-button-" + index}
+                                variant={selectedBackground === bg.name ? "solid" : "outlined"}
+                                onClick={() => setSelectedBackground(bg.name)}
+                                disabled={!character.backgrounds.includes(bg.name)}
+                            >{bg.name}</Button>)}
+                        </div>
+
+                    </Panel>
+                    <Separator
+                         className={"separator"}
+                         style={useMobileView ? {
+                            width: "100%", height: "4px", margin: "0.5rem 0",
+                         } : {}}
+                    />
+                    <Panel >
+                        <Typography level={"h3"}>Main Stats</Typography>
+                        <br />
+                        <div className={"stats-container"}>
+                            {STATS.map((stat, index) => <StatCard
+                                key={"stat-card-" + index}
+                                stat={stat}
+                                character={character}
+                                useBoost={useBoosts}
+                                useInsight={useInsight}
+                                viewIcons={viewIcons}
+                            />)}
+                        </div>
+
+                        <br /> <hr /> <br />
+                        <Typography level={"h3"}>Cumulative Skills</Typography>
+                        <br />
+                        <div className={"stats-container"}>
+                            {Object.keys(CATS).map(cat => <CumulativeStatCard
+                                key={"cumulative-stat-card-" + cat}
+                                statName={cat}
+                                character={character}
+                            />)}
+                        </div>
+
+                    </Panel>
+                </Group>
+
+            </div>
+
         </div>
-      </div>
+    );
+}
+
+function StatCard({stat, character, useBoost, useInsight, viewIcons}){
+    return (<Card
+        className={"stat-div"}
+    >
+        <Typography level={"title-lg"} display={"flex"} alignItems={"center"} gap={"0.5rem"} textAlign={"center"}>
+            {stat.name}
+        </Typography>
+
+        <div className={"stat-card-icons-list"} >
+            {<AffectedIcons stat={stat} viewIcons={viewIcons}/>}
+
+            {viewIcons && character.stats[stat.name]?.affectedByBackground && (
+                <Tooltip
+                    title={"Affected by [background selected]"}>
+                    <IconButton> <Wallpaper color={"success"} /> </IconButton>
+                </Tooltip>
+            )}
+            {viewIcons && character.stats[stat.name]?.affectedByChoice && (
+                <Tooltip
+                    title={"Affected by [choice]"}>
+                    <IconButton> <CheckCircleOutline color={"success"} /> </IconButton>
+                </Tooltip>
+            )}
+            {viewIcons && character.stats[stat.name] >= 50 && (
+                <Tooltip
+                    title={"Meets Matchmaker Reqs"}>
+                    <IconButton> <Checklist color={"success"} /> </IconButton>
+                </Tooltip>
+            )}
+            {viewIcons && useBoost && STATS.find(x => x.name === stat.name)?.boostValue > 0 && (
+                <Tooltip title={"NG+ Boost"}>
+                    <IconButton> <Rocket color={"primary"} /> </IconButton>
+                </Tooltip>
+            )}
+            {viewIcons && useInsight && stat.name === "Insight" && (
+                <Tooltip title={"Max Insight Boost"}>
+                    <IconButton> <Visibility color={"primary"} /> </IconButton>
+                </Tooltip>
+            )}
+        </div>
+
+        <Typography level={"body-md"}>{character.stats[stat.name].value}</Typography>
+
+    </Card>)
+}
+
+function CumulativeStatCard({statName, character}){
+    return (<Card
+        className={"stat-div"}
+    >
+        <Typography level={"title-lg"} display={"flex"} alignItems={"center"} gap={"0.5rem"} textAlign={"center"}>
+            {statName}
+        </Typography>
+        <Typography level={"body-md"}>
+            {STATS.filter(x => x.cat.includes(statName)).map(x => character.stats[x.name].value).reduce((a,b) => a+b, 0)}
+        </Typography>
+    </Card>)
+}
+
+function StatChoice({options=[], handleSelect, choiceIndex}){
+    const [selectedInd, setSelectedInd] = useState(-1)
+    return <div style={{display: "flex", alignItems: "center", gap: "0.5rem"}}>
+        <Typography>C{choiceIndex}</Typography>
+        <ButtonGroup>
+            {options.map((x, index) => <Button
+                key={"button-group-"+index}
+                variant={selectedInd === index ? "solid" : "outlined"}
+                onClick={() => {
+                    setSelectedInd(index)
+                    handleSelect(index)
+                }}
+            >{x}</Button>)}
+        </ButtonGroup>
     </div>
-  );
+}
+
+function AffectedIcons({stat, viewIcons}){
+    if (!viewIcons) return <></>
+    return <>
+        {stat.cat.map(x => <Tooltip
+            title={`Affects [${x}] Cumulative Skill`}
+            key={"tooltip-"+x}
+        >
+            <IconButton> {CATS[x]} </IconButton>
+        </Tooltip>)}
+    </>
 }
