@@ -271,6 +271,7 @@ export default function WHSP() {
                                 key={"cumulative-stat-card-" + cat}
                                 statName={cat}
                                 character={character}
+                                viewIcons={viewIcons}
                             />)}
                         </div>
 
@@ -329,11 +330,12 @@ function StatCard({stat, character, useBoost, useInsight, viewIcons}){
     </Card>)
 }
 
-function CumulativeStatCard({statName, character}){
+function CumulativeStatCard({statName, character, viewIcons}){
     return (<Card
         className={"stat-div"}
     >
         <Typography level={"title-lg"} display={"flex"} alignItems={"center"} gap={"0.5rem"} textAlign={"center"}>
+            {viewIcons && CATS[statName]}
             {statName}
         </Typography>
         <Typography level={"body-md"}>
